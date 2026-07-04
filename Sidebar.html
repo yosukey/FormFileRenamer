@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <script>var SERVER_INIT_DATA = <?!= initDataJson ?>;</script>
+  <style>
+    /* ---- Reset & Base ---- */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Google Sans', Roboto, Arial, sans-serif;
+      font-size: 13px;
+      color: #202124;
+      padding: 16px;
+      background: #fff;
+    }
+    h2 { font-size: 16px; margin-bottom: 12px; }
+    h3 { font-size: 13px; font-weight: 600; margin: 16px 0 8px; color: #5f6368; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    /* ---- Form Elements ---- */
+    label { display: block; font-weight: 500; margin-bottom: 4px; }
+    select, input[type="text"] {
+      width: 100%; padding: 8px; border: 1px solid #dadce0; border-radius: 4px;
+      font-size: 13px; margin-bottom: 8px; background: #fff;
+    }
+    select:focus, input:focus { outline: none; border-color: #1a73e8; }
+
+    /* ---- Buttons ---- */
+    .btn {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 8px 16px; border: none; border-radius: 4px;
+      font-size: 13px; font-weight: 500; cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-primary { background: #1a73e8; color: #fff; }
+    .btn-primary:hover { background: #1557b0; }
+    .btn-secondary { background: #f1f3f4; color: #202124; }
+    .btn-secondary:hover { background: #e8eaed; }
+    .btn-danger { background: none; color: #d93025; padding: 4px 8px; font-size: 12px; }
+    .btn-danger:hover { background: #fce8e6; }
+    .btn-sm { padding: 4px 10px; font-size: 12px; }
+
+    /* ---- Name Field Card ---- */
+    .field-card {
+      background: #f8f9fa; border: 1px solid #dadce0; border-radius: 8px;
+      padding: 10px 12px; margin-bottom: 8px; position: relative;
+      cursor: default;
+    }
+    .field-card.dragging { opacity: 0.4; }
+    .field-card.drag-over { border-color: #1a73e8; border-style: dashed; }
+    .field-card .field-header {
+      display: flex; align-items: center; gap: 6px; margin-bottom: 6px;
+    }
+    .field-card .drag-handle { color: #9aa0a6; cursor: grab; user-select: none; font-size: 16px; }
+    .field-card .field-header select { flex: 1; margin-bottom: 0; }
+    .prefix-suffix { display: flex; gap: 8px; }
+    .prefix-suffix input { width: 50%; margin-bottom: 0; }
+
+    /* ---- Ext Rule Row ---- */
+    .ext-row { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+    .ext-row input { width: 80px; margin-bottom: 0; }
+    .ext-row span { color: #5f6368; }
+
+    /* ---- Preview ---- */
+    .preview-box {
+      background: #e8f0fe; border-radius: 6px; padding: 10px 12px;
+      font-family: 'Roboto Mono', monospace; font-size: 13px;
+      word-break: break-all; margin: 12px 0; color: #174ea6;
+    }
+
+    /* ---- Feedback ---- */
+    .toast {
+      position: fixed; bottom: 16px; left: 16px; right: 16px;
+      background: #323232; color: #fff; padding: 10px 16px;
+      border-radius: 6px; font-size: 13px; text-align: center;
+      transform: translateY(80px); opacity: 0;
+      transition: all 0.3s;
+      z-index: 100;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+
+    /* ---- Trigger Status Banner ---- */
+    .trigger-banner {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 12px; border-radius: 8px; margin-bottom: 16px;
+      font-weight: 500; font-size: 13px;
+    }
+    .trigger-banner.active { background: #e6f4ea; color: #137333; }
+    .trigger-banner.inactive { background: #fce8e6; color: #c5221f; }
+    .trigger-banner.loading { background: #f1f3f4; color: #5f6368; }
+    .drive-warning {
+      background: #fef7e0; color: #7a4f00; border: 1px solid #f9c00e;
+      border-radius: 8px; padding: 10px 12px; margin-bottom: 16px;
+      font-size: 12px; line-height: 1.5;
+    }
+    .trigger-banner .trigger-label { flex: 1; }
+
+    /* ---- Missing item warning ---- */
+    .field-card.missing-item { border-color: #d93025; background: #fce8e6; }
+    .missing-label { color: #d93025; font-size: 11px; font-weight: 500; margin-top: 4px; }
+
+    /* ---- Footer ---- */
+    .footer { margin-top: 20px; padding-top: 12px; border-top: 1px solid #e8eaed; display: flex; gap: 8px; }
+
+    /* ---- Debug Log ---- */
+    .debug-panel { margin-top: 16px; border-top: 1px solid #e8eaed; padding-top: 8px; }
+    .debug-toggle { font-size: 11px; color: #5f6368; cursor: pointer; user-select: none; }
+    .debug-toggle:hover { color: #1a73e8; }
+    .debug-log {
+      max-height: 300px; overflow-y: auto; font-family: 'Roboto Mono', monospace;
+      font-size: 10px; line-height: 1.5; background: #f8f9fa; border: 1px solid #dadce0;
+      border-radius: 4px; padding: 6px 8px; margin-top: 4px; white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .debug-log .log-ts { color: #9aa0a6; }
+    .debug-log .log-info { color: #137333; }
+    .debug-log .log-warn { color: #e37400; }
+    .debug-log .log-error { color: #d93025; }
+    .debug-log .log-gsr { color: #1a73e8; }
+  </style>
+</head>
+<body>
+
+  <!-- 初期化エラー（問題発生時のみ表示） -->
+  <div id="initError" style="display:none;" class="drive-warning"></div>
+
+  <!-- Drive 権限警告（スコープ未承認時のみ表示） -->
+  <div id="driveWarning" style="display:none;" class="drive-warning">
+    ⚠️ <strong>Drive へのアクセス権がありません。</strong><br>
+    アドオンを一度アンインストールし、再インストール（再承認）してください。<br>
+    このままではファイルのリネームは動作しません。
+  </div>
+
+  <!-- GSR 承認エラー警告（google.script.run が動作しない場合に表示） -->
+  <!-- 内容は showGsrAuthWarning_() が diag.authStatus に応じて動的に描画 -->
+  <div id="gsrAuthWarning" style="display:none;" class="drive-warning"></div>
+
+  <!-- トリガー状態 -->
+  <div id="triggerBanner" class="trigger-banner loading">
+    <span class="trigger-label" id="triggerLabel">トリガーの状態を確認中…</span>
+  </div>
+
+  <!-- フォーム項目の再取得 -->
+  <button class="btn btn-secondary btn-sm" id="reloadItemsBtn" onclick="reloadFormItems()" style="margin-bottom:12px;">🔄 フォーム項目を再取得</button>
+
+  <!-- ファイルアップロード項目 -->
+  <h3>ファイルアップロード項目</h3>
+  <select id="fileField">
+    <option value="-1">— 読み込み中 —</option>
+  </select>
+
+  <!-- ファイル名に使う項目（並べ替え可能） -->
+  <h3>ファイル名の構成 <span style="font-weight:normal; font-size:11px;">（ドラッグで並べ替え）</span></h3>
+  <div id="nameFieldsList"></div>
+  <button class="btn btn-secondary btn-sm" onclick="addNameField()" style="margin-top:4px;">＋ 項目を追加</button>
+
+  <!-- 区切り文字 -->
+  <h3>区切り文字</h3>
+  <input type="text" id="separator" value="_" maxlength="5" placeholder="例: _ - ." style="width:80px;">
+
+  <!-- プレビュー -->
+  <h3>プレビュー</h3>
+  <div class="preview-box" id="preview">—</div>
+
+  <!-- サブフォルダ -->
+  <h3>サブフォルダ</h3>
+  <select id="subfolderField" onchange="updatePreview();">
+    <option value="-1">— 使用しない —</option>
+  </select>
+  <p style="font-size:11px; color:#5f6368; margin-top:2px; margin-bottom:8px;">
+    選択した項目の回答値をサブフォルダ名として、ファイルをそのフォルダへ移動します。
+  </p>
+
+  <!-- 拡張子ルール -->
+  <h3>拡張子の変換ルール</h3>
+  <label style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">
+    <input type="checkbox" id="lowercaseExt" checked>
+    拡張子を小文字化
+  </label>
+  <div id="extRulesList"></div>
+  <button class="btn btn-secondary btn-sm" onclick="addExtRule()" style="margin-top:4px;">＋ ルールを追加</button>
+
+  <!-- 保存ボタン -->
+  <div class="footer">
+    <button class="btn btn-primary" onclick="save()">💾 保存</button>
+    <button class="btn btn-secondary" onclick="resetAll()">リセット</button>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <!-- デバッグログパネル -->
+  <div class="debug-panel">
+    <span class="debug-toggle" id="debugToggle" onclick="toggleDebugLog()">▶ デバッグログ</span>
+    <div id="debugLog" class="debug-log" style="display:none;"></div>
+  </div>
+
+<script>
+  // =========================================================
+  //  Debug Log — サイドバー内に表示するデバッグログ
+  // =========================================================
+  var _debugLines = [];
+  function escHtml(s) {
+    // s == null のときだけ '' にする。0 や false を空文字に潰さない。
+    return String(s == null ? '' : s)
+      .replace(/&/g,'&amp;')
+      .replace(/"/g,'&quot;')
+      .replace(/'/g,'&#39;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;');
+  }
+  function dlog(level, msg) {
+    var ts = new Date().toISOString().substr(11, 12);
+    var line = '<span class="log-ts">' + ts + '</span> '
+      + '<span class="log-' + level + '">[' + level.toUpperCase() + ']</span> '
+      + escHtml(msg);
+    _debugLines.push(line);
+    if (_debugLines.length > 500) _debugLines.shift(); // メモリリーク防止
+    if (level === 'error') console.error('[FileRenamer]', msg);
+    else if (level === 'warn') console.warn('[FileRenamer]', msg);
+    else console.log('[FileRenamer]', msg);
+    var el = document.getElementById('debugLog');
+    if (el && el.style.display !== 'none') {
+      el.innerHTML = _debugLines.join('\n');
+      el.scrollTop = el.scrollHeight;
+    }
+  }
+  function toggleDebugLog() {
+    var el = document.getElementById('debugLog');
+    var btn = document.getElementById('debugToggle');
+    if (el.style.display === 'none') {
+      el.style.display = '';
+      el.innerHTML = _debugLines.join('\n');
+      el.scrollTop = el.scrollHeight;
+      btn.textContent = '▼ デバッグログ';
+    } else {
+      el.style.display = 'none';
+      btn.textContent = '▶ デバッグログ';
+    }
+  }
+
+  /** google.script.run 呼び出しの詳細ログ付きラッパー */
+  function gsrCall(funcName, args, onSuccess, onFailure) {
+    dlog('gsr', 'GSR CALL → ' + funcName + (args !== undefined ? ' args=' + JSON.stringify(args).substring(0, 200) : ''));
+    var startTime = Date.now();
+    var runner = google.script.run
+      .withSuccessHandler(function(result) {
+        var elapsed = Date.now() - startTime;
+        dlog('gsr', 'GSR OK ← ' + funcName + ' (' + elapsed + 'ms)' +
+          (result !== undefined ? ' result=' + JSON.stringify(result).substring(0, 200) : ''));
+        if (onSuccess) onSuccess(result);
+      })
+      .withFailureHandler(function(err) {
+        var elapsed = Date.now() - startTime;
+        var msg = (err && err.message) ? err.message : String(err);
+        var stack = (err && err.stack) ? err.stack : '';
+        dlog('error', 'GSR FAIL ← ' + funcName + ' (' + elapsed + 'ms) msg="' + msg + '"'
+          + (stack ? ' stack=' + stack : ''));
+        if (onFailure) onFailure(err);
+      });
+    if (args !== undefined) {
+      runner[funcName](args);
+    } else {
+      runner[funcName]();
+    }
+  }
+
+  // =========================================================
+  //  State
+  // =========================================================
+  let formItems = [];    // [{id, title, type}, ...]
+  let nameFields = [];   // [{id, prefix, suffix}, ...]
+  let extRules = [];     // [{from, to}, ...]  ※ from/to にドットは含めない
+  let lowercaseExt = true;
+  // select 要素の選択値は render 関数が反映する。applySettings はここに値を
+  // 入れるだけにして、setTimeout に頼らない同期的な初期化フローにする。
+  let selectedFileFieldId = -1;
+  let selectedSubfolderFieldId = -1;
+  let initErrors = [];   // 初期化中に発生したエラーを蓄積
+  let gsrAvailable = null; // null=未確認, true=動作, false=不可
+
+  // =========================================================
+  //  Init — サーバー事前取得データ優先、フォールバックで google.script.run
+  // =========================================================
+  let triggerActive = null;
+  var gsrFallbackTimer = null;
+
+  function startInit() {
+    initErrors = [];
+    document.getElementById('triggerBanner').className = 'trigger-banner loading';
+    document.getElementById('triggerBanner').innerHTML =
+      '<span class="trigger-label" id="triggerLabel">トリガーの状態を確認中…</span>';
+    document.getElementById('fileField').innerHTML = '<option value="-1">— 読み込み中 —</option>';
+    document.getElementById('initError').style.display = 'none';
+
+    // --- SERVER_INIT_DATA の存在と内容をログ出力 ---
+    dlog('info', '=== startInit 開始 ===');
+    dlog('info', 'SERVER_INIT_DATA type=' + typeof SERVER_INIT_DATA);
+    if (typeof SERVER_INIT_DATA !== 'undefined' && SERVER_INIT_DATA) {
+      dlog('info', 'SERVER_INIT_DATA keys=' + Object.keys(SERVER_INIT_DATA).join(','));
+      if (SERVER_INIT_DATA.error) dlog('error', 'SERVER_INIT_DATA.error=' + SERVER_INIT_DATA.error);
+      if (SERVER_INIT_DATA.diag) dlog('info', 'diag=' + JSON.stringify(SERVER_INIT_DATA.diag));
+    }
+
+    // --- google.script.run 疎通テスト（非ブロッキング） ---
+    // 結果を待ってから保留設定の自動保存を試みる
+    dlog('gsr', 'GSR 疎通テスト開始 (gsrPing)');
+    gsrCall('gsrPing', 'init-probe',
+      function(r) {
+        gsrAvailable = true;
+        dlog('info', 'GSR 疎通テスト成功: ' + JSON.stringify(r));
+        tryAutoSavePending_();
+      },
+      function(e) {
+        gsrAvailable = false;
+        dlog('error', 'GSR 疎通テスト失敗: google.script.run はこの環境で動作しません');
+        showGsrAuthWarning_();
+        tryAutoSavePending_();
+      }
+    );
+
+    // SERVER_INIT_DATA が存在する場合はサーバー側で事前取得済み
+    // （showSettingsSidebar がメニュー経由 FULL 権限で取得し HTML に埋め込む）
+    if (typeof SERVER_INIT_DATA !== 'undefined' && SERVER_INIT_DATA && !SERVER_INIT_DATA.error) {
+      dlog('info', 'サーバー事前取得データを使用');
+      dlog('info', 'コードバージョン: ' + SERVER_INIT_DATA.codeVersion);
+      dlog('info', 'driveAccess=' + SERVER_INIT_DATA.driveAccess + ' triggerStatus=' + SERVER_INIT_DATA.triggerStatus);
+      dlog('info', 'formItems=' + (SERVER_INIT_DATA.formItems || []).length + '件');
+      if (SERVER_INIT_DATA.partialErrors) {
+        dlog('warn', '部分エラー: ' + SERVER_INIT_DATA.partialErrors.join('; '));
+      }
+
+      try {
+        if (!SERVER_INIT_DATA.driveAccess) {
+          document.getElementById('driveWarning').style.display = '';
+        }
+      } catch (e) { dlog('error', 'driveWarning 表示エラー: ' + e.message); }
+
+      // triggerStatus は必ず反映する（try-catch で保護）
+      try {
+        triggerActive = (SERVER_INIT_DATA.triggerStatus === true);
+        renderTriggerBanner();
+      } catch (e) {
+        dlog('error', 'トリガーバナー更新エラー: ' + e.message);
+        triggerActive = null;
+        try { renderTriggerBanner(); } catch (_) {}
+      }
+
+      formItems = SERVER_INIT_DATA.formItems || [];
+      if (formItems.length === 0) {
+        initErrors.push('フォーム項目が0件です。フォームに項目が追加されているか確認してください。');
+      }
+
+      // サーバー側で保留設定を保存済みの場合（showSettingsSidebar が PENDING_SAVE を処理した）
+      if (SERVER_INIT_DATA.pendingSaved) {
+        clearPendingSave();
+        dlog('info', 'サーバー側で保留設定の保存が完了');
+        setTimeout(function() { showToast('✅ 保留中の設定を自動保存しました'); }, 300);
+      }
+
+      // localStorage にペンディング設定があれば UI に反映
+      // 自動保存は GSR 疎通テスト完了後に tryAutoSavePending_() で行う
+      var pendingLocal = getPendingSaveLocal();
+      if (pendingLocal && !SERVER_INIT_DATA.pendingSaved) {
+        dlog('info', 'localStorage から保留設定を復元（自動保存は GSR 確認後）');
+        applySettings(pendingLocal);
+      } else if (SERVER_INIT_DATA.settings) {
+        applySettings(SERVER_INIT_DATA.settings);
+      } else {
+        initDefaults();
+      }
+      renderAll();
+      showInitErrors();
+      dlog('info', '=== startInit 完了 (SERVER_INIT_DATA 経路) ===');
+      return;
+    }
+
+    // SERVER_INIT_DATA がない場合（古いコードや直接 HTML を開いた場合）のフォールバック
+    if (typeof SERVER_INIT_DATA !== 'undefined' && SERVER_INIT_DATA && SERVER_INIT_DATA.error) {
+      initErrors.push('サーバー事前取得エラー: ' + SERVER_INIT_DATA.error);
+    }
+    dlog('warn', 'google.script.run によるフォールバック初期化');
+
+    // GSR フォールバックが応答しない場合のタイムアウト（10秒）
+    gsrFallbackTimer = setTimeout(function() {
+      if (triggerActive === null) {
+        dlog('error', 'GSR フォールバックタイムアウト: トリガー状態を取得できませんでした');
+        initErrors.push('トリガー状態の取得がタイムアウトしました');
+        renderTriggerBanner();
+        showInitErrors();
+      }
+    }, 10000);
+
+    initViaGoogleScriptRun();
+  }
+
+  /** google.script.run を順次実行するフォールバック初期化 */
+  function initViaGoogleScriptRun() {
+    gsrCall('getCodeVersion', undefined,
+      function(v) { dlog('info', 'コードバージョン: ' + v); gsrStep_checkDrive(); },
+      function(err) {
+        initErrors.push('コードバージョン取得失敗: ' + ((err && err.message) || err));
+        gsrStep_checkDrive();
+      }
+    );
+  }
+
+  function gsrStep_checkDrive() {
+    gsrCall('checkDriveAccess', undefined,
+      function(ok) {
+        if (!ok) document.getElementById('driveWarning').style.display = '';
+        gsrStep_triggerStatus();
+      },
+      function() { gsrStep_triggerStatus(); }
+    );
+  }
+
+  function gsrStep_triggerStatus() {
+    gsrCall('getTriggerStatus', undefined,
+      function(isActive) {
+        if (gsrFallbackTimer) clearTimeout(gsrFallbackTimer);
+        triggerActive = isActive;
+        renderTriggerBanner();
+        gsrStep_formItems();
+      },
+      function(err) {
+        if (gsrFallbackTimer) clearTimeout(gsrFallbackTimer);
+        initErrors.push('トリガー状態の取得失敗: ' + ((err && err.message) || err));
+        triggerActive = null;
+        renderTriggerBanner();
+        gsrStep_formItems();
+      }
+    );
+  }
+
+  function gsrStep_formItems() {
+    gsrCall('getFormItems', undefined,
+      function(items) {
+        formItems = items || [];
+        if (formItems.length === 0) {
+          initErrors.push('フォーム項目が0件です。');
+        }
+        gsrStep_loadSettings();
+      },
+      function(err) {
+        formItems = [];
+        initErrors.push('フォーム項目の読み込み失敗: ' + ((err && err.message) || err));
+        gsrStep_loadSettings();
+      }
+    );
+  }
+
+  function gsrStep_loadSettings() {
+    gsrCall('loadSettings', undefined,
+      function(settings) {
+        if (settings) { applySettings(settings); } else { initDefaults(); }
+        renderAll();
+        showInitErrors();
+        dlog('info', '=== startInit 完了 (GSR フォールバック経路) ===');
+      },
+      function(err) {
+        initErrors.push('設定の読み込み失敗: ' + ((err && err.message) || err));
+        initDefaults();
+        renderAll();
+        showInitErrors();
+        dlog('info', '=== startInit 完了 (GSR フォールバック経路・エラーあり) ===');
+      }
+    );
+  }
+
+  /** 初期化中のエラーをまとめて表示 */
+  function showInitErrors() {
+    if (initErrors.length === 0) return;
+    var el = document.getElementById('initError');
+    // 承認エラーかどうかを判定
+    var hasAuthError = initErrors.some(function(e) { return e.indexOf('承認') !== -1; });
+    var authHint = hasAuthError
+      ? '<br><strong>💡 対処法:</strong> スクリプトエディタを開き、任意の関数（例: onOpen）を▶ボタンで手動実行して承認ダイアログを完了させてから、サイドバーを開き直してください。'
+      : '';
+    el.innerHTML =
+      '<strong>⚠️ 初期化中に問題が発生しました:</strong><br>' +
+      initErrors.map(function(e) { return '・' + escHtml(e); }).join('<br>') +
+      authHint +
+      '<br><button class="btn btn-secondary btn-sm" onclick="startInit()" style="margin-top:6px;">🔄 再読み込み</button>';
+    el.style.display = '';
+  }
+
+  function initDefaults() {
+    // ファイルアップロード項目を自動検出
+    const fileItem = formItems.find(it => it.type === 'FILE_UPLOAD');
+    selectedFileFieldId = fileItem ? fileItem.id : -1;
+    selectedSubfolderFieldId = -1;
+    // ファイルアップロード以外の項目を全てファイル名に含める
+    nameFields = formItems
+      .filter(isSelectableNameItem)
+      .map(it => ({ id: it.id, prefix: '', suffix: '' }));
+    extRules = [
+      { from: 'jpeg', to: 'jpg' }
+    ];
+    lowercaseExt = true;
+    // separator と lowercaseExt は専用の state 変数を持たず DOM が唯一の値。
+    // applySettings と同様にここでも DOM を既定値へ戻す。これを怠るとリセット時に
+    // 区切り文字やチェックボックスが旧値のまま残り、buildSettings が旧値を保存する。
+    document.getElementById('separator').value = '_';
+    document.getElementById('lowercaseExt').checked = true;
+  }
+
+  function applySettings(s) {
+    document.getElementById('separator').value = s.separator || '_';
+    // 設定保存後に項目種別が変わって SECTION_HEADER 等の構造項目に
+    // なっているケースを除外する。
+    // 未設定 (-1) と「フォームから削除済み」(missing) は残し、UI 上で扱えるようにする。
+    // 保存済み ID が文字列で渡ってきても findItemById() の厳密比較 (===) と
+    // 一致するよう Number 化する。
+    nameFields = (s.nameFields || [])
+      .map(function(f) {
+        var id = (f.id == null) ? -1 : Number(f.id);
+        return { id: Number.isFinite(id) ? id : -1, prefix: f.prefix || '', suffix: f.suffix || '' };
+      })
+      .filter(function(f) {
+        if (f.id === -1) return true;
+        var it = findItemById(f.id);
+        if (!it) return true; // missing は警告表示のため残す
+        return isSelectableNameItem(it);
+      });
+    // ユーザーが意図的にルールを全削除した状態を尊重するため、空配列でも
+    // デフォルトに巻き戻さない。デフォルトを与えるのは initDefaults() のみ。
+    extRules = (s.extRules || []).map(function(r) {
+      return { from: (r.from || '').replace(/^\./,''), to: (r.to || '').replace(/^\./,'') };
+    });
+    lowercaseExt = s.lowercaseExt !== false;
+    document.getElementById('lowercaseExt').checked = lowercaseExt;
+    // 保存済み fileFieldId が FILE_UPLOAD でなければ無効化（保存後に項目種別が変更されたケース対応）
+    // 文字列 ID も Number 化して findItemById() の厳密比較に一致させる。
+    var savedFileId = (s.fileFieldId != null) ? Number(s.fileFieldId) : -1;
+    if (!Number.isFinite(savedFileId)) savedFileId = -1;
+    if (savedFileId !== -1) {
+      var fileIt = findItemById(savedFileId);
+      if (fileIt && fileIt.type !== 'FILE_UPLOAD') savedFileId = -1;
+    }
+    selectedFileFieldId = savedFileId;
+    // subfolderFieldId が構造項目を指していた場合は無効化
+    var savedSubfolderId = (s.subfolderFieldId != null) ? Number(s.subfolderFieldId) : -1;
+    if (!Number.isFinite(savedSubfolderId)) savedSubfolderId = -1;
+    if (savedSubfolderId !== -1) {
+      var subIt = findItemById(savedSubfolderId);
+      if (subIt && !isSelectableNameItem(subIt)) savedSubfolderId = -1;
+    }
+    selectedSubfolderFieldId = savedSubfolderId;
+    // fileField / subfolderField の <option> は renderAll() 内の select 関数が
+    // selectedFileFieldId / selectedSubfolderFieldId を参照してセットするため、
+    // ここで setTimeout 経由に DOM を直接触る必要はない。
+  }
+
+  // =========================================================
+  //  Trigger Status
+  // =========================================================
+  function renderTriggerBanner() {
+    const banner = document.getElementById('triggerBanner');
+
+    if (triggerActive === null) {
+      banner.className = 'trigger-banner loading';
+      banner.innerHTML =
+        '<span class="trigger-label">トリガーの状態を確認できません</span>';
+      return;
+    }
+
+    if (triggerActive) {
+      banner.className = 'trigger-banner active';
+      banner.innerHTML =
+        '<span class="trigger-label">✅ トリガー有効</span>';
+    } else {
+      banner.className = 'trigger-banner inactive';
+      banner.innerHTML =
+        '<span class="trigger-label">⚠️ トリガー無効</span>';
+    }
+  }
+
+  // =========================================================
+  //  Render
+  // =========================================================
+  function renderAll() {
+    renderFileFieldSelect();
+    renderSubfolderFieldSelect();
+    renderNameFields();
+    renderExtRules();
+    updatePreview();
+  }
+
+  function renderFileFieldSelect() {
+    const sel = document.getElementById('fileField');
+    if (formItems.length === 0) {
+      sel.innerHTML = '<option value="-1">— 項目を読み込めませんでした —</option>';
+      return;
+    }
+    // FILE_UPLOAD 以外を選ばせると onFormSubmit が誤動作するため、
+    // 実際にアップロード回答を持つ項目だけを候補にする。
+    const uploadItems = formItems.filter(it => it.type === 'FILE_UPLOAD');
+    if (uploadItems.length === 0) {
+      sel.innerHTML = '<option value="-1">— ファイルアップロード項目がありません —</option>';
+      return;
+    }
+    sel.innerHTML = '<option value="-1">— 選択してください —</option>';
+    uploadItems.forEach(it => {
+      const opt = document.createElement('option');
+      opt.value = it.id;
+      opt.textContent = it.title;
+      sel.appendChild(opt);
+    });
+    // 選択値は state (selectedFileFieldId) を唯一の真実として復元する。
+    // change リスナーが常に state を同期しているため、DOM の旧値へフォールバック
+    // すると、リセットで state を初期化した直後に旧選択を DOM から復活させて
+    // しまう。state だけを見る。
+    const desired = (selectedFileFieldId != null && selectedFileFieldId !== -1)
+      ? String(selectedFileFieldId)
+      : '';
+    if (desired && uploadItems.some(it => String(it.id) === desired)) {
+      sel.value = desired;
+    }
+  }
+
+  function renderSubfolderFieldSelect() {
+    const sel = document.getElementById('subfolderField');
+    sel.innerHTML = '<option value="-1">— 使用しない —</option>';
+    const candidates = formItems.filter(isSelectableNameItem);
+    candidates.forEach(it => {
+      const opt = document.createElement('option');
+      opt.value = it.id;
+      opt.textContent = it.title;
+      sel.appendChild(opt);
+    });
+    // 選択値は state (selectedSubfolderFieldId) のみを真実として復元する。
+    // DOM の旧値へフォールバックすると、リセットで state=-1 にした直後に旧選択を
+    // DOM から復活させ、リセットしてもサブフォルダが解除されない不整合になる。
+    const desired = (selectedSubfolderFieldId != null && selectedSubfolderFieldId !== -1)
+      ? String(selectedSubfolderFieldId)
+      : '';
+    if (desired && candidates.some(it => String(it.id) === desired)) {
+      sel.value = desired;
+    }
+  }
+
+  function buildItemOptions(selectedId) {
+    let html = '<option value="-1">— 選択 —</option>';
+    formItems.forEach(it => {
+      if (!isSelectableNameItem(it)) return;
+      const sel = it.id === selectedId ? ' selected' : '';
+      html += `<option value="${it.id}"${sel}>${escHtml(it.title)}</option>`;
+    });
+    return html;
+  }
+
+  function findItemById(id) {
+    return formItems.find(it => it.id === id);
+  }
+
+  // ファイル名/サブフォルダ名は単一スカラー値で表せる項目だけを許可する。
+  // チェックボックス・グリッド・長文回答などは値が複雑になり、ファイル名と
+  // しての可読性・実用性に問題があるため、明示的に許可リスト方式で限定する。
+  // - TEXT             : 記述式（短文）
+  // - MULTIPLE_CHOICE  : ラジオボタン
+  // - LIST             : プルダウン
+  // - DATE             : 日付（「時刻を含める」ON も含む）
+  // - TIME             : 時刻（「経過時間」ON も含む）
+  // - SCALE            : 均等目盛
+  // 許可種別はサーバー (Code.gs の NAME_ELIGIBLE_TYPE_NAMES_) を唯一の真実とし、
+  // showSettingsSidebar() が initData.nameEligibleTypes で配布する。GSR フォール
+  // バック（古いコード・直接 HTML を開いた場合）に備えて同じ既定値も保持する。
+  var NAME_ELIGIBLE_ITEM_TYPES = (function() {
+    var fromServer = (typeof SERVER_INIT_DATA !== 'undefined' && SERVER_INIT_DATA
+      && Array.isArray(SERVER_INIT_DATA.nameEligibleTypes))
+      ? SERVER_INIT_DATA.nameEligibleTypes : null;
+    var list = fromServer || ['TEXT', 'MULTIPLE_CHOICE', 'LIST', 'DATE', 'TIME', 'SCALE'];
+    var map = {};
+    list.forEach(function(t) { map[t] = true; });
+    return map;
+  })();
+  function isSelectableNameItem(it) {
+    return !!NAME_ELIGIBLE_ITEM_TYPES[it.type];
+  }
+
+  function renderNameFields() {
+    const container = document.getElementById('nameFieldsList');
+    container.innerHTML = '';
+    nameFields.forEach((field, i) => {
+      const card = document.createElement('div');
+      card.className = 'field-card';
+      // draggable はドラッグハンドル上で mousedown したときだけ有効化する。
+      // カード全体を常時 draggable にすると、接頭辞/接尾辞入力内のテキスト選択が
+      // ドラッグ扱いになり選択できない。
+      card.draggable = false;
+      card.dataset.idx = i;
+
+      const isMissing = field.id !== -1 && !findItemById(field.id);
+      if (isMissing) card.classList.add('missing-item');
+
+      card.innerHTML = `
+        <div class="field-header">
+          <span class="drag-handle">⠿</span>
+          <select onchange="nameFields[${i}].id=parseInt(this.value,10);updatePreview();">
+            ${buildItemOptions(field.id)}
+          </select>
+          <button class="btn btn-danger" onclick="removeNameField(${i})">✕</button>
+        </div>
+        <div class="prefix-suffix">
+          <input type="text" placeholder="接頭辞" value="${escHtml(field.prefix)}"
+                 oninput="nameFields[${i}].prefix=this.value;updatePreview();">
+          <input type="text" placeholder="接尾辞" value="${escHtml(field.suffix)}"
+                 oninput="nameFields[${i}].suffix=this.value;updatePreview();">
+        </div>
+        ${isMissing ? '<div class="missing-label">⚠️ この項目はフォームから削除されています</div>' : ''}
+      `;
+
+      // ドラッグハンドルを掴んだときだけカードを draggable にする
+      const handle = card.querySelector('.drag-handle');
+      if (handle) {
+        handle.addEventListener('mousedown', function() {
+          card.draggable = true;
+          // mouseup をハンドル上だけで拾うと、ハンドルの外で離した場合に
+          // draggable が true のまま残り、接頭辞/接尾辞入力のテキスト選択が
+          // ドラッグ扱いになって選択できなくなる。document 上で一度だけ拾って
+          // 確実に戻す。
+          const reset = function() {
+            card.draggable = false;
+            document.removeEventListener('mouseup', reset);
+          };
+          document.addEventListener('mouseup', reset);
+        });
+      }
+
+      // Drag events
+      card.addEventListener('dragstart', onDragStart);
+      card.addEventListener('dragover', onDragOver);
+      card.addEventListener('dragleave', onDragLeave);
+      card.addEventListener('drop', onDrop);
+      card.addEventListener('dragend', onDragEnd);
+
+      container.appendChild(card);
+    });
+  }
+
+  function renderExtRules() {
+    const container = document.getElementById('extRulesList');
+    container.innerHTML = '';
+    extRules.forEach((rule, i) => {
+      const row = document.createElement('div');
+      row.className = 'ext-row';
+      row.innerHTML = `
+        <input type="text" value="${escHtml(rule.from)}" placeholder="jpeg"
+               oninput="this.value=this.value.replace(/\\./g,''); extRules[${i}].from=this.value;">
+        <span>→</span>
+        <input type="text" value="${escHtml(rule.to)}" placeholder="jpg"
+               oninput="this.value=this.value.replace(/\\./g,''); extRules[${i}].to=this.value;">
+        <button class="btn btn-danger" onclick="removeExtRule(${i})">✕</button>
+      `;
+      container.appendChild(row);
+    });
+  }
+
+  // =========================================================
+  //  Preview
+  // =========================================================
+  // 区切り文字はサーバーの saveSettings と同じ正規化（禁止文字・不可視文字の除去、
+  // 連続空白の圧縮、トリム、長さ上限、空なら '_'）をプレビューにも適用する。
+  // これを怠ると「保存すると区切り文字が変わる」（例: "/" が除去され "_" になる、
+  // " - " が "-" になる）際にプレビューと実ファイル名が食い違う。
+  // ※ 各項目の値はプレビューでは回答値の代わりに項目タイトルを使う擬似表示のため、
+  //   実際の回答値に対するサニタイズまでは再現できない（区切り文字のみ厳密に一致）。
+  function sanitizeSeparatorForPreview_(sep) {
+    var out = String(sep == null ? '' : sep)
+      .replace(/[\/\\?%*:|"<>]/g, '')                       // OS 禁止文字
+      .replace(/[\x00-\x1F\x7F]/g, '')                       // 制御文字
+      .replace(/[\u200B-\u200F\u202A-\u202E\u2060\uFEFF]/g, '') // 双方向・ゼロ幅
+      .replace(/\s+/g, ' ')                                    // 連続空白を1つに
+      .trim()
+      .slice(0, 10); // SEPARATOR_MAX_LENGTH_ と一致させる
+    return out || '_';
+  }
+  function updatePreview() {
+    const sep = sanitizeSeparatorForPreview_(document.getElementById('separator').value);
+    const parts = nameFields
+      // 実行時 (onFormSubmit) は isNameEligibleItem_ で対象外種別を弾くため、
+      // プレビューでも同じ許可種別だけを対象にする。これを怠ると、設定後に項目
+      // 種別が変更された項目がプレビューには出るのに実ファイル名には出ず、
+      // プレビューと実結果が食い違う。
+      .filter(f => {
+        if (f.id == null || f.id === -1) return false;
+        const it = findItemById(f.id);
+        return it && isSelectableNameItem(it);
+      })
+      .map(f => {
+        let v = findItemById(f.id).title;
+        if (f.prefix) v = f.prefix + v;
+        if (f.suffix) v = v + f.suffix;
+        return v;
+      });
+    const fileName = parts.length > 0 ? parts.join(sep) + '.{拡張子}' : '（項目を追加してください）';
+    // サブフォルダのプレビュー
+    const subId = parseInt(document.getElementById('subfolderField').value, 10);
+    const subItem = subId !== -1 ? findItemById(subId) : null;
+    const preview = subItem ? subItem.title + '/' + fileName : fileName;
+    document.getElementById('preview').textContent = preview;
+  }
+
+  // =========================================================
+  //  Actions
+  // =========================================================
+  function addNameField() {
+    nameFields.push({ id: -1, prefix: '', suffix: '' });
+    renderNameFields();
+  }
+
+  function removeNameField(i) {
+    nameFields.splice(i, 1);
+    renderNameFields();
+    updatePreview();
+  }
+
+  function addExtRule() {
+    extRules.push({ from: '', to: '' });
+    renderExtRules();
+  }
+
+  function removeExtRule(i) {
+    extRules.splice(i, 1);
+    renderExtRules();
+  }
+
+  function buildSettings() {
+    var fileVal = parseInt(document.getElementById('fileField').value, 10);
+    var subfolderVal = parseInt(document.getElementById('subfolderField').value, 10);
+    return {
+      fileFieldId: Number.isFinite(fileVal) ? fileVal : -1,
+      separator: document.getElementById('separator').value || '_',
+      // id を数値化して返し、サーバー・クライアント双方で型を揃える
+      nameFields: nameFields
+        .map(function(f) { return { id: Number(f.id), prefix: f.prefix || '', suffix: f.suffix || '' }; })
+        .filter(function(f) { return Number.isFinite(f.id) && f.id !== -1; }),
+      extRules: extRules.filter(function(r) { return r.from && r.to; }),
+      lowercaseExt: document.getElementById('lowercaseExt').checked,
+      subfolderFieldId: Number.isFinite(subfolderVal) ? subfolderVal : -1
+    };
+  }
+
+  function isAuthError(msg) {
+    return msg.indexOf('承認') !== -1 || msg.indexOf('authorization') !== -1
+      || msg.indexOf('Authorization') !== -1 || msg.indexOf('permission') !== -1
+      || msg.indexOf('Permission') !== -1 || msg.indexOf('ScriptError') !== -1;
+  }
+
+  function save() {
+    var settings = buildSettings();
+    dlog('info', '=== 保存開始 ===');
+    dlog('info', 'settings=' + JSON.stringify(settings).substring(0, 300));
+
+    // GSR が利用不可と判明している場合は storePendingSave を試みつつ
+    // localStorage にも退避する（別端末でも保留が引き継がれる可能性を残す）
+    if (gsrAvailable === false) {
+      dlog('warn', 'GSR 利用不可 → storePendingSave 試行 + localStorage 退避');
+      setPendingSaveLocal(settings);
+      gsrCall('storePendingSave', settings,
+        function() {
+          dlog('info', 'storePendingSave 成功 (gsrAvailable=false 経路)');
+          showToast('🔒 設定を一時保存しました。メニューから「設定を開く」で開き直すと保存が完了します');
+        },
+        function() {
+          dlog('warn', 'storePendingSave も失敗 → localStorage のみで保留');
+          showToast('🔒 承認エラー: メニューから「設定を開く」で開き直すと自動保存されます');
+          showGsrAuthWarning_();
+        }
+      );
+      return;
+    }
+
+    gsrCall('saveSettings', settings,
+      function() {
+        clearPendingSave();
+        gsrAvailable = true;
+        dlog('info', '保存成功 (直接)');
+        showToast('✅ 設定を保存しました');
+      },
+      function(err) {
+        var msg = (err && err.message) ? err.message : String(err);
+        dlog('error', '保存失敗 (直接): ' + msg);
+        if (isAuthError(msg)) {
+          gsrAvailable = false;
+          dlog('warn', '承認エラー → storePendingSave フォールバック試行');
+          gsrCall('storePendingSave', settings,
+            function() {
+              setPendingSaveLocal(settings);
+              dlog('info', 'storePendingSave 成功 → PENDING_SAVE に一時保存済み');
+              showToast('🔒 設定を一時保存しました。メニューから「設定を開く」で開き直すと保存が完了します');
+            },
+            function(err2) {
+              var msg2 = (err2 && err2.message) ? err2.message : String(err2);
+              dlog('error', 'storePendingSave も失敗: ' + msg2 + ' → localStorage のみに退避');
+              setPendingSaveLocal(settings);
+              showToast('🔒 承認エラー: メニューから「設定を開く」で開き直すと自動保存されます');
+              showGsrAuthWarning_();
+            }
+          );
+        } else {
+          showToast('❌ 保存に失敗: ' + msg);
+        }
+      }
+    );
+  }
+
+  // localStorage の保留設定キー。フォーム単位で分離する。
+  // 同一アドオンの HtmlService サイドバーは複数フォームで同じオリジンを共有し得る
+  // ため、固定キーだと Form A で退避した保留設定が Form B のサイドバーで復元・
+  // 自動保存されてしまう。サーバーが配布する formId をキーに含めて分離する。
+  // formId を取得できない場合（GSR フォールバック・旧サーバーコード等）は従来の
+  // 共通キーにフォールバックし、退避機能自体は失わない。
+  var PENDING_SAVE_KEY = (function() {
+    var id = null;
+    if (typeof SERVER_INIT_DATA !== 'undefined' && SERVER_INIT_DATA) {
+      id = SERVER_INIT_DATA.formId
+        || (SERVER_INIT_DATA.diag && SERVER_INIT_DATA.diag.formId) || null;
+    }
+    // diag.formId は失敗時 'ERR: ...' の文字列になるため、ID 形式のときだけ採用する
+    return (typeof id === 'string' && /^[A-Za-z0-9_-]+$/.test(id))
+      ? 'FR_PENDING_SAVE_' + id
+      : 'FR_PENDING_SAVE';
+  })();
+
+  /** localStorage にペンディング設定を保存 */
+  function setPendingSaveLocal(settings) {
+    try { localStorage.setItem(PENDING_SAVE_KEY, JSON.stringify(settings)); } catch(e) {}
+  }
+
+  /** localStorage のペンディング設定を取得 */
+  function getPendingSaveLocal() {
+    try {
+      var raw = localStorage.getItem(PENDING_SAVE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch(e) { return null; }
+  }
+
+  /** ペンディング設定をクリア */
+  function clearPendingSave() {
+    try {
+      localStorage.removeItem(PENDING_SAVE_KEY);
+      // フォーム間で共有されていた旧バージョンの共通キーも併せて掃除する
+      localStorage.removeItem('FR_PENDING_SAVE');
+    } catch(e) {}
+  }
+
+  /**
+   * GSR 疎通テスト完了後に呼ばれる: localStorage の保留設定を自動保存する
+   * GSR が使えない場合は保存をスキップし、ユーザーに再承認を案内する
+   */
+  function tryAutoSavePending_() {
+    var pendingLocal = getPendingSaveLocal();
+    if (!pendingLocal) return;
+    // サーバー側で既に保存済みの場合はスキップ
+    if (typeof SERVER_INIT_DATA !== 'undefined' && SERVER_INIT_DATA && SERVER_INIT_DATA.pendingSaved) return;
+
+    if (gsrAvailable) {
+      dlog('info', '保留設定の自動保存を試行 (GSR 利用可能)');
+      gsrCall('saveSettings', pendingLocal,
+        function() {
+          clearPendingSave();
+          dlog('info', '保留設定の自動保存成功');
+          showToast('✅ 保留中の設定を自動保存しました');
+        },
+        function() {
+          dlog('warn', '保留設定の自動保存失敗 (GSR)');
+          showToast('⚠️ 保留中の設定を復元しました（保存するには再度「保存」ボタンを押してください）');
+        }
+      );
+    } else {
+      dlog('warn', 'GSR 利用不可のため保留設定の自動保存をスキップ');
+      showToast('⚠️ 保留中の設定を復元しました（再承認後に「保存」してください）');
+    }
+  }
+
+  /**
+   * GSR が利用不可の場合に承認警告バナーを表示する
+   *
+   * 2 つのケースを区別する:
+   *   (A) diag.authStatus === 'NOT_REQUIRED' の場合
+   *       → スクリプトはサーバー側では完全に承認済み。にもかかわらず
+   *         サイドバー内の google.script.run が "承認が必要" で失敗するのは、
+   *         ブラウザのデフォルト Google アカウント（Chrome profile の
+   *         最初にログインしたアカウント）が Workspace アカウントと一致しない
+   *         "multi-login 問題" の可能性が非常に高い。
+   *         再承認ボタンでは解決しないため、アカウント切り替えを具体的に案内する。
+   *   (B) それ以外（REQUIRED / 取得失敗 など）
+   *       → 本当にスクリプトの再承認が必要。従来どおり authUrl を案内する。
+   */
+  function showGsrAuthWarning_() {
+    var el = document.getElementById('gsrAuthWarning');
+    if (!el) return;
+
+    var diag = (typeof SERVER_INIT_DATA !== 'undefined' && SERVER_INIT_DATA
+                && SERVER_INIT_DATA.diag) ? SERVER_INIT_DATA.diag : {};
+    var authStatus = diag.authStatus || '';
+    var effUser = diag.effectiveUser || '';
+    var authUrl = diag.authUrl || '';
+    var isLikelyMultiLogin = (authStatus === 'NOT_REQUIRED');
+
+    var html;
+    if (isLikelyMultiLogin) {
+      // スクリプト本体は承認済みなので、再承認では直らない
+      var userLabel = effUser ? escHtml(effUser) : 'Workspace アカウント';
+      html =
+        '🔒 <strong>サイドバーから設定を保存できません</strong><br>' +
+        '<strong>ブラウザのログイン アカウント不一致</strong>が原因の可能性が非常に高いです。<br><br>' +
+
+        '<strong>状況:</strong><br>' +
+        '・このアドオンは <code>' + userLabel + '</code> として' +
+        '<strong>承認済み</strong>です。<br>' +
+        '・ただしサイドバー内の通信が<strong>別の Google アカウント</strong>' +
+        '（個人の Gmail など）として送られているため拒否されています。<br>' +
+        '・Chrome / ブラウザに複数の Google アカウントでログインしていて、' +
+        '<strong>最初にログインしたアカウント（デフォルト）</strong>が ' +
+        '<code>' + userLabel + '</code> 以外になっている場合に発生します。<br><br>' +
+
+        '<strong>対処方法（上から順に試してください）:</strong><br>' +
+        '① <strong>シークレット ウィンドウで ' + userLabel + ' だけでログイン</strong>して、' +
+        'この Forms を開き直す（最も確実・すぐ試せます）<br>' +
+        '② <code>' + userLabel + '</code> 専用の Chrome プロファイルを作成し、' +
+        'そのプロファイルから Forms を開く<br>' +
+        '③ すべての Google アカウントから一度ログアウトし、' +
+        '<strong>最初に ' + userLabel + ' でログイン</strong>してから他のアカウントを追加する<br>' +
+        '④ Forms の URL が <code>.../forms/u/0/d/...</code> で、' +
+        '<code>u/0</code> が ' + userLabel + ' になっているか確認する<br><br>' +
+
+        '<span style="color:#7a4f00;">※ 設定変更はこの画面で行えますが、' +
+        '<strong>保存はアカウント不一致の解消後</strong>に可能になります。</span>';
+    } else {
+      // スクリプト本体が未承認 or 取得失敗 → 従来の案内
+      html =
+        '🔒 <strong>サイドバーからの保存に承認が必要です。</strong><br>' +
+        '設定の変更はこの画面に表示されますが、保存にはアドオンの再承認が必要です。<br>';
+      if (authUrl) {
+        html += '<a href="' + escHtml(authUrl) + '" target="_blank">こちらから再承認</a>するか、';
+      }
+      html += 'アドオンを一度アンインストールし、再インストールしてください。';
+    }
+
+    el.innerHTML = html;
+    el.style.display = '';
+  }
+
+  function resetAll() {
+    if (!confirm('設定を初期状態に戻しますか？')) return;
+    initDefaults();
+    renderAll();
+    showToast('🔄 リセットしました（まだ保存されていません）');
+  }
+
+  /** フォーム項目をサーバーから再取得し、既存設定を保持したまま UI を更新 */
+  function reloadFormItems() {
+    dlog('info', '=== フォーム項目再取得開始 ===');
+    var btn = document.getElementById('reloadItemsBtn');
+    btn.disabled = true;
+    btn.textContent = '読み込み中…';
+    gsrCall('getFormItems', undefined,
+      function(items) {
+        formItems = items || [];
+        dlog('info', '再取得成功: ' + formItems.length + '件');
+        // selectedFileFieldId / selectedSubfolderFieldId は state に保持されて
+        // いるため、renderAll() 内のセレクト関数が自動で再選択してくれる。
+        // 再取得で項目が消えていた場合は候補内に一致せず、自動的に未選択 (-1) に戻る。
+        renderAll();
+        var missingCount = nameFields.filter(function(f) { return f.id !== -1 && !findItemById(f.id); }).length;
+        if (missingCount > 0) {
+          showToast('⚠️ ' + missingCount + '件の項目がフォームから削除されています');
+        } else {
+          showToast('✅ フォーム項目を再取得しました');
+        }
+        btn.disabled = false;
+        btn.textContent = '🔄 フォーム項目を再取得';
+      },
+      function(err) {
+        var msg = (err && err.message) ? err.message : String(err);
+        dlog('error', '再取得失敗: ' + msg);
+        if (isAuthError(msg)) {
+          showToast('🔒 承認エラー: メニューから「設定を開く」でサイドバーを開き直してください');
+        } else {
+          showToast('❌ 再取得に失敗: ' + msg);
+        }
+        btn.disabled = false;
+        btn.textContent = '🔄 フォーム項目を再取得';
+      }
+    );
+  }
+
+  // =========================================================
+  //  Drag & Drop (並べ替え)
+  // =========================================================
+  let dragIdx = null;
+
+  function onDragStart(e) {
+    dragIdx = parseInt(e.currentTarget.dataset.idx, 10);
+    e.currentTarget.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+  }
+
+  function onDragOver(e) {
+    e.preventDefault();
+    e.currentTarget.classList.add('drag-over');
+  }
+
+  function onDragLeave(e) {
+    e.currentTarget.classList.remove('drag-over');
+  }
+
+  function onDrop(e) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('drag-over');
+    const dropIdx = parseInt(e.currentTarget.dataset.idx, 10);
+    if (dragIdx == null || dragIdx === dropIdx) return;
+    const [moved] = nameFields.splice(dragIdx, 1);
+    nameFields.splice(dropIdx, 0, moved);
+    renderNameFields();
+    updatePreview();
+  }
+
+  function onDragEnd(e) {
+    e.currentTarget.classList.remove('dragging');
+    // 次のテキスト選択を妨げないよう、ドラッグ終了時に draggable を戻す
+    e.currentTarget.draggable = false;
+    dragIdx = null;
+  }
+
+  // =========================================================
+  //  Util
+  // =========================================================
+  function showToast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 2500);
+  }
+
+  // separator / fileField / subfolderField 変更時もプレビュー更新
+  document.getElementById('separator').addEventListener('input', updatePreview);
+  document.getElementById('fileField').addEventListener('change', function() {
+    var v = parseInt(this.value, 10);
+    selectedFileFieldId = isNaN(v) ? -1 : v;
+    updatePreview();
+  });
+  document.getElementById('subfolderField').addEventListener('change', function() {
+    var v = parseInt(this.value, 10);
+    selectedSubfolderFieldId = isNaN(v) ? -1 : v;
+    updatePreview();
+  });
+
+  // 初期化開始（const 宣言の TDZ を避けるためスクリプト末尾で呼ぶ）
+  startInit();
+</script>
+</body>
+</html>
